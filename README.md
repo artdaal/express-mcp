@@ -147,6 +147,8 @@ node dist/src/cli.js agent <<'JSON'
 JSON
 ```
 
+Verify discovery with `openclaw skills --agent main info express-messenger --json` (replace `main` with your agent ID). If the directory is present but the running gateway still reports an old skill catalog, restart it with `openclaw gateway restart`, then start a fresh agent session.
+
 The full request examples are in [the skill](skills/express-messenger/SKILL.md). The helper never automatically retries writes. `confirmed:true` is an explicit caller assertion that the user authorized the exact recipient and content; it is not an independent permission system. On updates, review and back up the existing skill before replacing it; the installer refuses to overwrite one silently.
 
 ## Capabilities and bounds
