@@ -23,7 +23,7 @@ try {
   const filename = manifest[0]?.filename;
   const names = manifest[0]?.files?.map(file => file.path) ?? [];
   if (names.some(name => name.startsWith(".agent/") || name.startsWith("dist/test/") || name.startsWith("native/bin/"))) throw new Error("Local workflow, tests or host binaries leaked into the package.");
-  for (const required of ["native/keychain.swift", "native/session-lock.swift", "scripts/install.mjs", "scripts/build-native.mjs", "dist/src/session/broker.js"]) if (!names.includes(required)) throw new Error(`Missing package component: ${required}`);
+  for (const required of ["native/keychain.swift", "native/session-lock.swift", "scripts/install.mjs", "scripts/build-native.mjs", "dist/src/session/broker.js", "docs/diagrams/architecture.png", "docs/diagrams/authentication.png"]) if (!names.includes(required)) throw new Error(`Missing package component: ${required}`);
   if (typeof filename !== "string") {
     throw new Error("Package smoke did not receive an npm tarball name.");
   }

@@ -1,0 +1,18 @@
+sequenceDiagram
+  participant User
+  participant UI as Local QR<br/>page
+  participant Broker as sessiond
+  participant Store as Keychain
+  participant Service as eXpress<br/>services
+  User->>UI: Open login and scan QR
+  UI->>Broker: Start independent<br/>device enrollment
+  Broker->>Service: Signed ETS and CTS<br/>registration
+  Service-->>Broker: Session and account keys
+  Broker->>Store: Atomically save auth bundle
+  loop Before access expiry
+    Broker->>Store: Persist rotation-pending marker
+    Broker->>Service: One refresh request
+    Service-->>Broker: New token pair
+    Broker->>Store: Atomically save next generation
+  end
+  Note over Broker,Store: Unknown refresh outcome.<br/>Recover the session.<br/>Do not replay the request.

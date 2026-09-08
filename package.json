@@ -14,7 +14,8 @@
     "scripts/install.mjs",
     "scripts/build-native.mjs",
     "skills/express-messenger",
-    "scripts/install-skill.mjs"
+    "scripts/install-skill.mjs",
+    "docs/diagrams/*.png"
   ],
   "engines": {
     "node": ">=22"

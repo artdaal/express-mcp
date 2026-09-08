@@ -6,44 +6,14 @@ An unofficial **eXpress messenger MCP server** for personal agents on macOS. Rea
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  Agent[Agent harness] -->|12 tools over stdio| MCP[MCP proxy]
-  Skill[On-demand skill] --> CLI[JSON CLI helper]
-  CLI -->|one MCP connection per task| MCP
-  MCP -->|private Unix socket| Broker[sessiond broker]
-  Broker --> Auth[Single auth and refresh owner]
-  Auth --> Keychain[Dedicated macOS Keychain item]
-  Broker --> REST[HTTPS API]
-  Broker --> WS[Authenticated WebSocket]
-  Broker --> Crypto[Message and file cryptography]
-```
+![Session broker and on-demand agent architecture](docs/diagrams/architecture.png)
 
 - `sessiond` holds the only upstream connection and refresh writer. A native process lease prevents two local brokers from owning the same session.
 - Tokens, keys, device identity and rotation generation live together in a dedicated Keychain item. The official app's credentials are never read. MCP returns content and sanitized diagnostics, not credentials.
 - Each MCP caller has separate, short-lived confirmations and pagination cursors. Closing a connection discards that state; restarting an agent does not log out the broker.
 - Origins are explicitly configured and HTTPS-validated. QR enrollment must match the configured CTS exactly. Redirects are rejected; custom trust roots can be supplied with `NODE_EXTRA_CA_CERTS` before installation.
 
-```mermaid
-sequenceDiagram
-  participant User
-  participant UI as Local QR page
-  participant Broker as sessiond
-  participant Store as Keychain
-  participant Service as eXpress services
-  User->>UI: Open login and scan QR
-  UI->>Broker: Start independent device enrollment
-  Broker->>Service: Signed ETS and CTS registration
-  Service-->>Broker: Session and account keys
-  Broker->>Store: Atomically save auth bundle
-  loop Before access expiry
-    Broker->>Store: Persist rotation-pending marker
-    Broker->>Service: One refresh request
-    Service-->>Broker: New token pair
-    Broker->>Store: Atomically save next generation
-  end
-  Note over Broker,Store: Ambiguous refresh outcome requires recovery;<br/>do not replay an uncertain rotation.
-```
+![QR enrollment and refresh rotation sequence](docs/diagrams/authentication.png)
 
 ## Install on macOS
 
