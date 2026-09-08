@@ -1,0 +1,138 @@
+{
+  "source": "https://github.com/IH8E/express-cli/blob/2e58b5fbf4cc2e65c9e689fffa05bffc791ddd90/src/auth/qr-login.ts",
+  "revision": "2e58b5fbf4cc2e65c9e689fffa05bffc791ddd90",
+  "requests": [
+    {
+      "host": "ets.chat.example.com",
+      "route": "/api/v1/authentication/qr/mobile_to_web/request",
+      "method": "POST",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "ru-RU,ru;q=0.9",
+        "connection": "keep-alive",
+        "content-type": "application/json",
+        "origin": "https://chat.example.com",
+        "referer": "https://chat.example.com/",
+        "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      "body": {
+        "registration_id": {
+          "type": "string",
+          "bytes": 36
+        },
+        "registration_token": {
+          "type": "string",
+          "bytes": 88
+        },
+        "sign_pub_key": {
+          "type": "string",
+          "bytes": 44
+        },
+        "udid": {
+          "type": "string",
+          "bytes": 36
+        },
+        "app_version": "3.66.47",
+        "device": "Chrome 149.0",
+        "device_software": "macOS 10.15.7",
+        "device_hostname": null,
+        "device_meta": {
+          "pushes": false,
+          "timezone": "$localTimeZone",
+          "permissions": {
+            "notifications": false
+          }
+        },
+        "locale": "ru",
+        "manufacturer": "Google",
+        "platform": "web",
+        "platform_package_id": "com.example.express"
+      },
+      "signature": {
+        "digestMatches": true,
+        "signatureVerifiedWithNode": true,
+        "signedFields": "(request-target) (created) express-request-nonce digest",
+        "keyMatchesRegistration": true
+      }
+    },
+    {
+      "host": "ets.chat.example.com",
+      "route": "/api/v1/authentication/register_confirm/qr",
+      "method": "POST",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "ru-RU,ru;q=0.9",
+        "connection": "keep-alive",
+        "content-type": "application/json",
+        "origin": "https://chat.example.com",
+        "referer": "https://chat.example.com/",
+        "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      "body": {
+        "registration_id": {
+          "type": "string",
+          "bytes": 36
+        },
+        "temp_token": {
+          "type": "string",
+          "bytes": 1754
+        }
+      },
+      "signature": {
+        "digestMatches": true,
+        "signatureVerifiedWithNode": true,
+        "signedFields": "(request-target) (created) express-request-nonce digest",
+        "keyMatchesRegistration": true
+      }
+    },
+    {
+      "host": "cts1.chat.example.com",
+      "route": "/api/v1/ad_integration/register_confirm/qr",
+      "method": "POST",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "ru-RU,ru;q=0.9",
+        "connection": "keep-alive",
+        "content-type": "application/json",
+        "origin": "https://chat.example.com",
+        "referer": "https://chat.example.com/",
+        "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+      },
+      "body": {
+        "rts_registration_id": {
+          "type": "string",
+          "bytes": 36
+        },
+        "temp_token": {
+          "type": "string",
+          "bytes": 224
+        },
+        "ets": true
+      },
+      "signature": {
+        "digestMatches": true,
+        "signatureVerifiedWithNode": true,
+        "signedFields": "(request-target) (created) express-request-nonce digest",
+        "keyMatchesRegistration": true
+      }
+    }
+  ]
+}

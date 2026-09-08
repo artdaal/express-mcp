@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.agent/
+native/bin/
+*.tgz
+
+# A real browser profile must never be kept in the repository.
+chromium-profile/
+.express-profile/
+
+.env*
+installation.json
+session.json
+*deployment*.json

@@ -1,0 +1,53 @@
+{
+  "name": "express-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "On-demand eXpress messenger access for agents, with a macOS Keychain session broker",
+  "type": "module",
+  "bin": {
+    "express-mcp": "dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "README.md",
+    "native/*.swift",
+    "scripts/install.mjs",
+    "scripts/build-native.mjs",
+    "skills/express-messenger",
+    "scripts/install-skill.mjs"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run clean && tsc",
+    "test:unit": "node --test dist/test/*.test.js",
+    "test:smoke": "node dist/test/protocol-smoke.js",
+    "test:package": "node scripts/package-smoke.mjs",
+    "test": "npm run build:native && npm run build && npm run test:unit && npm run test:smoke && npm run test:package",
+    "build:native": "node scripts/build-native.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "libsodium-wrappers-sumo": "0.8.4",
+    "playwright-core": "1.61.1",
+    "qrcode": "1.5.4",
+    "tweetnacl": "1.0.3",
+    "ws": "8.21.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "@types/qrcode": "1.5.5",
+    "@types/ws": "8.18.1",
+    "linkedom": "0.18.12",
+    "typescript": "5.8.3"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artdaal/express-mcp.git"
+  }
+}

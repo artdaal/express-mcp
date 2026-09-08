@@ -1,0 +1,6 @@
+.agent/
+.codex/
+.claude/
+test/
+dist/test/
+native/bin/
