@@ -1,18 +1,18 @@
 sequenceDiagram
-  participant User
-  participant UI as Local QR<br/>page
+  participant User as Пользователь
+  participant UI as Локальная<br/>страница QR
   participant Broker as sessiond
   participant Store as Keychain
-  participant Service as eXpress<br/>services
-  User->>UI: Open login and scan QR
-  UI->>Broker: Start independent<br/>device enrollment
-  Broker->>Service: Signed ETS and CTS<br/>registration
-  Service-->>Broker: Session and account keys
-  Broker->>Store: Atomically save auth bundle
-  loop Before access expiry
-    Broker->>Store: Persist rotation-pending marker
-    Broker->>Service: One refresh request
-    Service-->>Broker: New token pair
-    Broker->>Store: Atomically save next generation
+  participant Service as Сервисы<br/>eXpress
+  User->>UI: Открыть вход<br/>и отсканировать QR
+  UI->>Broker: Подключить<br/>отдельное устройство
+  Broker->>Service: Подписанные запросы<br/>регистрации в ETS и CTS
+  Service-->>Broker: Сессия и ключи аккаунта
+  Broker->>Store: Атомарно сохранить<br/>данные авторизации
+  loop До истечения access token
+    Broker->>Store: Сохранить признак<br/>незавершённой ротации
+    Broker->>Service: Один refresh-запрос
+    Service-->>Broker: Новая пара токенов
+    Broker->>Store: Атомарно сохранить<br/>следующее поколение
   end
-  Note over Broker,Store: Unknown refresh outcome.<br/>Recover the session.<br/>Do not replay the request.
+  Note over Broker,Store: Результат refresh неизвестен.<br/>Восстановить сессию.<br/>Не повторять запрос.

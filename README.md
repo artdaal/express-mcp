@@ -1,23 +1,23 @@
 # express-mcp
 
-An unofficial **eXpress messenger MCP server** for personal agents on macOS. Read chats and group threads, find people, send text or attachments, and download verified files. A persistent session broker owns authentication; short-lived agents connect over a private Unix socket.
+Неофициальный **MCP-сервер для мессенджера eXpress** и персональных агентов на macOS. Позволяет читать чаты и треды в группах, искать людей, отправлять сообщения и вложения, а также скачивать файлы с проверкой целостности. Авторизацией управляет постоянно работающий брокер сессии. Агенты подключаются к нему через локальный Unix socket и могут завершаться, не прерывая сессию.
 
-**Start here:** [Install](#install-on-macos) → [Log in](#log-in) → [Connect your agent](#agent-harness-quick-guide).
+**Начало работы:** [Установка](#установка-на-macos) → [Вход](#вход) → [Подключение к агентам](#подключение-к-агентам).
 
-## Architecture
+## Архитектура
 
-![Session broker and on-demand agent architecture](docs/diagrams/architecture.png)
+![Архитектура брокера сессии и подключения агента по запросу](docs/diagrams/architecture.png)
 
-- `sessiond` holds the only upstream connection and refresh writer. A native process lease prevents two local brokers from owning the same session.
-- Tokens, keys, device identity and rotation generation live together in a dedicated Keychain item. The official app's credentials are never read. MCP returns content and sanitized diagnostics, not credentials.
-- Each MCP caller has separate, short-lived confirmations and pagination cursors. Closing a connection discards that state; restarting an agent does not log out the broker.
-- Origins are explicitly configured and HTTPS-validated. QR enrollment must match the configured CTS exactly. Redirects are rejected; custom trust roots can be supplied with `NODE_EXTRA_CA_CERTS` before installation.
+- `sessiond` управляет взаимодействием с сервером и обновлением токенов. Системная блокировка не позволяет двум локальным брокерам одновременно владеть одной сессией.
+- Токены, ключи, идентификатор устройства и номер поколения токенов хранятся вместе в отдельной записи macOS Keychain. Учётные данные официального приложения не читаются. Через MCP возвращаются содержимое чатов и диагностика без секретов.
+- У каждого MCP-подключения свои короткоживущие подтверждения отправки и курсоры пагинации. При закрытии подключения они удаляются, но сессия брокера продолжает работать.
+- Адреса серверов задаются явно и проверяются как HTTPS origins. При входе через QR адрес CTS должен точно совпасть с конфигурацией. HTTP-редиректы запрещены. Дополнительные корневые сертификаты можно подключить через `NODE_EXTRA_CA_CERTS` перед установкой.
 
-![QR enrollment and refresh rotation sequence](docs/diagrams/authentication.png)
+![Последовательность входа через QR и обновления токенов](docs/diagrams/authentication.png)
 
-## Install on macOS
+## Установка на macOS
 
-Requires **Node.js 22+**, npm, an active macOS user login with an accessible login Keychain, and Xcode Command Line Tools (`xcode-select --install`). This release is source-installed; it is not published to npm. Linux and Windows session brokers are not supported.
+Нужны **Node.js 22+**, npm, активный вход пользователя в macOS с доступной связкой ключей `login` и Xcode Command Line Tools (`xcode-select --install`). Эта версия устанавливается из исходников и не опубликована в npm. Запуск брокера на Linux и Windows не поддерживается.
 
 ```sh
 git clone https://github.com/artdaal/express-mcp.git
@@ -26,7 +26,7 @@ npm ci
 npm run build
 ```
 
-Create a private JSON configuration outside this repository. Obtain the **exact CTS origin**, ETS origin, web origin and client package identifier from your deployment administrator. The values below are examples, not a working public service:
+Создайте приватный JSON-файл конфигурации за пределами репозитория. У администратора вашей инсталляции нужно узнать **точный CTS origin**, адреса ETS и веб-клиента, а также идентификатор пакета клиента. Значения ниже приведены для примера — работающего сервиса по этим адресам нет:
 
 ```json
 {
@@ -44,9 +44,9 @@ node dist/src/cli.js configure < /absolute/private/deployment.json
 node dist/src/cli.js install
 ```
 
-`configure` writes an owner-only configuration under `~/Library/Application Support/express-mcp/`. `install` compiles the small Swift helpers, installs a user LaunchAgent and checks broker readiness. It creates a private rollback backup and **does not modify any agent harness configuration**. Re-run `install` after changing configuration or upgrading the checkout. Keep the checkout at a stable path.
+`configure` сохраняет конфигурацию в `~/Library/Application Support/express-mcp/` с доступом только для владельца. `install` компилирует небольшие утилиты на Swift, устанавливает пользовательский LaunchAgent и проверяет готовность брокера. Перед заменой LaunchAgent создаётся приватная резервная копия для отката. **Настройки агентских harness не меняются.** Повторяйте `install` после изменения конфигурации или обновления исходников. Не перемещайте каталог установленного репозитория.
 
-## Log in
+## Вход
 
 ```sh
 node dist/src/cli.js login
@@ -54,15 +54,15 @@ node dist/src/cli.js status
 node dist/src/cli.js session-smoke
 ```
 
-`login` opens a loopback-only QR page on the broker Mac. Scan it in the official mobile client and approve the device. The compatibility profile appears as **Chrome 149.0** on the phone; it does not launch a browser engine for API calls. A QR expires after two minutes; its local page offers renewal for ten minutes.
+`login` открывает страницу с QR на том Mac, где работает брокер. Страница доступна только через loopback. Отсканируйте код официальным мобильным клиентом и подтвердите подключение устройства. В режиме совместимости на телефоне отображается **Chrome 149.0**, хотя браузерный движок для API-запросов не запускается. QR действует две минуты, а получить новый код на той же локальной странице можно в течение десяти минут.
 
-`status` reports local state. `session-smoke` performs an authenticated list and reads one recent message without sending anything; reads may mark a chat read. `authState:ready` alone is not an end-to-end test.
+`status` показывает локальное состояние. `session-smoke` проверяет авторизованный доступ: получает список чатов и читает одно недавнее сообщение, ничего не отправляя. Чтение может отметить чат прочитанным. Сам по себе `authState:ready` ещё не подтверждает работоспособность всей цепочки.
 
-Enroll **each Mac separately**. Never clone a rotating refresh credential into two running brokers. Over SSH, the login page belongs to the remote Mac; use a trusted local port-forward/session to that Mac for enrollment, and ensure its user Keychain is available.
+Подключайте **каждый Mac отдельно**. Не копируйте один ротируемый refresh token в два работающих брокера. При работе по SSH страница входа открывается на удалённом Mac. Для доступа к ней используйте доверенное удалённое подключение или локальный port forwarding; связка ключей пользователя на этом Mac должна быть доступна.
 
-## Agent harness quick guide
+## Подключение к агентам
 
-Use absolute paths and the same macOS user as the broker. Replace `/absolute/express-mcp` below with your checkout. Restart or refresh the harness MCP session after changing its configuration.
+Указывайте абсолютные пути и запускайте MCP от того же пользователя macOS, что и брокер. В примерах замените `/absolute/express-mcp` на путь к своему репозиторию. После изменения настроек перезапустите или обновите MCP-сессию в harness.
 
 ### Codex
 
@@ -70,7 +70,7 @@ Use absolute paths and the same macOS user as the broker. Replace `/absolute/exp
 codex mcp add express -- /absolute/path/to/node /absolute/express-mcp/dist/src/cli.js serve
 ```
 
-Equivalent `~/.codex/config.toml` entry:
+Эквивалентная запись в `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.express]
@@ -78,15 +78,15 @@ command = "/absolute/path/to/node"
 args = ["/absolute/express-mcp/dist/src/cli.js", "serve"]
 ```
 
-See [Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli). Ask the agent to check `express_status`, then list or read a known chat.
+Подробнее — в [документации по MCP в Codex](https://learn.chatgpt.com/docs/extend/mcp?surface=cli). Попросите агента вызвать `express_status`, затем получить список чатов или прочитать знакомый чат.
 
-### Claude Code and other MCP harnesses
+### Claude Code и другие MCP-клиенты
 
 ```sh
 claude mcp add --transport stdio --scope user express -- /absolute/path/to/node /absolute/express-mcp/dist/src/cli.js serve
 ```
 
-See [Claude Code MCP configuration](https://code.claude.com/docs/en/mcp). Other harnesses can use this standard stdio configuration:
+См. [настройку MCP в Claude Code](https://code.claude.com/docs/en/mcp). Для других harness подойдёт стандартная конфигурация stdio:
 
 ```json
 {
@@ -99,57 +99,57 @@ See [Claude Code MCP configuration](https://code.claude.com/docs/en/mcp). Other 
 }
 ```
 
-### OpenClaw: load capabilities on demand
+### OpenClaw: подключение по запросу
 
-Install the skill only in the intended agent's workspace:
+Установите скилл в workspace нужного агента:
 
 ```sh
 node scripts/install-skill.mjs --workspace /absolute/openclaw/workspace
 ```
 
-The installer copies a real skill directory and records local executable paths. It adds **zero global MCP tools**. Only the skill's short discovery description is available by default; its instructions load when the agent selects it. Start a fresh agent session and ask, for example, “Find the Project chat in eXpress and summarize recent replies.” See [OpenClaw skill loading](https://docs.openclaw.ai/tools/skills).
+Установщик копирует каталог скилла и сохраняет локальные пути к исполняемым файлам. **Глобальные MCP-инструменты не добавляются.** По умолчанию агент видит только короткое описание скилла; полные инструкции загружаются, когда он выбирает его для задачи. Начните новую сессию и попросите, например: «Найди в eXpress чат проекта и кратко перескажи последние ответы». Механизм описан в [документации OpenClaw](https://docs.openclaw.ai/tools/skills).
 
-The skill invokes a bounded JSON CLI. Preparation and sending share one MCP connection, avoiding confirmation failures caused by separate one-shot MCP invocations. A manual read-only check:
+Скилл вызывает CLI с JSON-вводом и ограниченным объёмом результата. Подготовка и отправка выполняются в одном MCP-подключении: подтверждение не теряется между отдельными запусками клиента. Пример ручной проверки без отправки сообщений:
 
 ```sh
 node dist/src/cli.js agent <<'JSON'
-{"operation":"search-chats","query":"Project","limit":50,"pages":3}
+{"operation":"search-chats","query":"Проект","limit":50,"pages":3}
 JSON
 ```
 
-Verify discovery with `openclaw skills --agent main info express-messenger --json` (replace `main` with your agent ID). If the directory is present but the running gateway still reports an old skill catalog, restart it with `openclaw gateway restart`, then start a fresh agent session.
+Проверьте, что OpenClaw обнаружил скилл: `openclaw skills --agent main info express-messenger --json`. Вместо `main` укажите ID своего агента. Если каталог уже установлен, но gateway всё ещё возвращает старый список скиллов, выполните `openclaw gateway restart` и начните новую сессию агента.
 
-The full request examples are in [the skill](skills/express-messenger/SKILL.md). The helper never automatically retries writes. `confirmed:true` is an explicit caller assertion that the user authorized the exact recipient and content; it is not an independent permission system. On updates, review and back up the existing skill before replacing it; the installer refuses to overwrite one silently.
+Все примеры запросов находятся в [инструкциях скилла](skills/express-messenger/SKILL.md). CLI не повторяет операции записи автоматически. `confirmed:true` означает, что вызывающая сторона подтверждает разрешение пользователя на конкретного получателя и содержимое; сам этот флаг не является отдельной системой контроля доступа. Перед обновлением скилла проверьте изменения и сохраните резервную копию: установщик не перезаписывает существующий каталог автоматически.
 
-## Capabilities and bounds
+## Возможности и ограничения
 
-| Area | MCP tools (`express_` prefix) |
+| Назначение | MCP-инструменты с префиксом `express_` |
 | --- | --- |
-| Session and discovery | `status`, `list_chats`, `search_direct_chats`, `get_chat_info` |
-| History | `read_chat`, `list_threads`, `read_thread` |
-| Text | `prepare_message`, `send_message` |
-| Files | `prepare_attachment`, `send_attachment`, `download_attachment` |
+| Сессия и поиск | `status`, `list_chats`, `search_direct_chats`, `get_chat_info` |
+| История переписки | `read_chat`, `list_threads`, `read_thread` |
+| Текстовые сообщения | `prepare_message`, `send_message` |
+| Вложения | `prepare_attachment`, `send_attachment`, `download_attachment` |
 
-Text and attachments use exact-content, caller-bound, single-use confirmations valid for 120 seconds. Attachment preparation hashes the source; changing it invalidates confirmation. Uploads and message writes are never blindly retried after an uncertain response. Image uploads use an encrypted PNG original plus an encrypted JPEG preview. Downloads verify message signatures, secretstream integrity, plaintext size and hash, then save into a new private directory.
+Для текста и вложений используются одноразовые подтверждения, привязанные к конкретному MCP-подключению и точному содержимому. Они действуют 120 секунд. На этапе подготовки вложения вычисляется хеш исходного файла; изменение файла делает подтверждение недействительным. Если результат загрузки или отправки неизвестен, автоматического повтора не будет. Изображение отправляется как зашифрованный PNG-оригинал с отдельно зашифрованным JPEG-превью. При скачивании проверяются подпись сообщения, целостность secretstream, размер и хеш расшифрованного файла. Результат сохраняется в новый приватный каталог.
 
-Current limits: 50 items per MCP page; CLI up to 20 pages and about 200 KiB of content; 10 MiB per attachment; PNG image uploads only; a bounded recent thread list; no global full-text search. Some historical messages may be undecryptable and are returned with an explicit error marker. This is an unofficial, version-sensitive protocol integration: deployment versions and policy may differ. The optional legacy DOM adapter is retained for regression work, not the recommended installation path.
+Текущие ограничения: до 50 элементов на страницу MCP, до 20 страниц и примерно 200 KiB содержимого за один вызов CLI, до 10 MiB на вложение. Отправка в режиме изображения поддерживает только PNG. Список тредов ограничен недавними записями, глобального полнотекстового поиска нет. Некоторые старые сообщения могут не расшифровываться — для них возвращается явный признак ошибки. Интеграция неофициальная и зависит от версии протокола; настройки и политики разных инсталляций могут отличаться. Старый DOM-адаптер сохранён для регрессионных проверок, но для обычной установки рекомендуется брокер сессии.
 
-## Maintenance
+## Обслуживание
 
 ```sh
 npm test
 npm run typecheck
 launchctl kickstart -k "gui/$(id -u)/io.github.express-mcp.express-sessiond"
-# Restore the LaunchAgent from a private backup returned by install:
+# Восстановить LaunchAgent из резервной копии, созданной командой install:
 node scripts/install.mjs --restore /absolute/private/backup-directory
 ```
 
-A locked Keychain needs local user action. A revoked session or ambiguous refresh requires a new QR; repeated retries do not repair it. Diagnose upstream errors with the sanitized phase/status in `status`. For an uncertain send, inspect the target history before deciding whether another send is appropriate. An upload may leave an orphaned encrypted file if message creation fails; automatic server-file cleanup is not implemented.
+Если Keychain заблокирован, потребуется действие пользователя на Mac. Отзыв сессии или неопределённый результат refresh требуют нового QR; повторные попытки сами по себе проблему не устранят. Для диагностики ошибок сервера смотрите этап запроса и код ошибки в `status` — без секретов. При неопределённом результате отправки сначала проверьте историю целевого чата. Если файл загрузился, а сообщение не создалось, на сервере может остаться зашифрованный файл без сообщения; автоматическая очистка таких файлов пока не реализована.
 
-## Development and attribution
+## Разработка и источники
 
-Tests cover QR request signatures, origin pinning, refresh races and recovery, IPC caller isolation, message cryptography, encrypted file round trips, bounded agent commands and package installation. Local `.agent/` evidence, credentials, browser profiles, generated binaries and test payloads are excluded from distribution.
+Тесты проверяют подписи QR-запросов, привязку к разрешённым origins, гонки и восстановление при refresh, изоляцию MCP-подключений, криптографию сообщений, шифрование и расшифровку файлов, ограничения CLI и установку пакета. Локальные материалы `.agent/`, учётные данные, браузерные профили, собранные бинарные файлы и тестовые данные не включаются в дистрибутив.
 
-[eXpress CLI by IH8E](https://github.com/IH8E/express-cli/tree/2e58b5fbf4cc2e65c9e689fffa05bffc791ddd90) was a protocol reference for the browser-compatible QR flow; it is not a runtime dependency, and its source is not distributed here. Test request fixtures use synthetic data. Refresh handling also follows the conservative principles in [RFC 9700 §4.14](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14).
+[eXpress CLI от IH8E](https://github.com/IH8E/express-cli/tree/2e58b5fbf4cc2e65c9e689fffa05bffc791ddd90) использовался как источник сведений о протоколе входа через QR в режиме совместимости с веб-клиентом. Он не является runtime-зависимостью, его исходный код здесь не распространяется. Тестовые примеры запросов содержат синтетические данные. Обработка refresh также учитывает консервативный подход из [RFC 9700 §4.14](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14).
 
-MIT licensed. Not affiliated with or endorsed by the eXpress vendor.
+Лицензия MIT. Проект не связан с разработчиком eXpress и не является официальным продуктом.

@@ -1,12 +1,12 @@
-# README diagrams
+# Диаграммы для README
 
-The main README embeds committed PNGs so readers do not depend on a host's Mermaid renderer. Editable `.mmd` sources and shared styling are kept here.
+В основном README используются готовые PNG из репозитория: их отображение не зависит от поддержки Mermaid на сайте. Здесь хранятся редактируемые исходники `.mmd` и общие настройки оформления.
 
-Render with Mermaid CLI 11.12.0:
+Рендеринг через Mermaid CLI 11.12.0:
 
 ```sh
 npx --yes --package @mermaid-js/mermaid-cli@11.12.0 mmdc -i docs/diagrams/architecture.mmd -o docs/diagrams/architecture.png -c docs/diagrams/config.json -b white -s 2
 npx --yes --package @mermaid-js/mermaid-cli@11.12.0 mmdc -i docs/diagrams/authentication.mmd -o docs/diagrams/authentication.png -c docs/diagrams/config.json -b white -s 2
 ```
 
-When using an existing Chrome installation, Mermaid CLI accepts a private Puppeteer configuration through `-p /absolute/config.json` with its `executablePath`. Inspect both images after rendering and check the published README, not just Markdown syntax.
+Для уже установленного Chrome можно передать приватную конфигурацию Puppeteer через `-p /absolute/config.json`, указав путь к браузеру в `executablePath`. После рендеринга проверьте обе картинки и их отображение в опубликованном README — одной проверки Markdown недостаточно.

@@ -1,10 +1,10 @@
 flowchart TB
-  Agent[Agent harness] -->|12 tools over stdio| MCP[MCP proxy]
-  Skill[On-demand skill] --> CLI[JSON CLI helper]
-  CLI -->|one MCP connection per task| MCP
-  MCP -->|private Unix socket| Broker[sessiond broker]
-  Broker --> Auth[Single auth and refresh owner]
-  Auth --> Keychain[Dedicated macOS Keychain item]
+  Agent[Агентский harness] -->|12 инструментов через stdio| MCP[MCP-прокси]
+  Skill[Скилл по запросу] --> CLI[CLI с JSON-вводом]
+  CLI -->|одно соединение MCP<br/>на задачу| MCP
+  MCP -->|локальный Unix socket| Broker[Брокер сессии sessiond]
+  Broker --> Auth[Единое управление<br/>авторизацией и refresh]
+  Auth --> Keychain[Отдельная запись<br/>в macOS Keychain]
   Broker --> REST[HTTPS API]
-  Broker --> WS[Authenticated WebSocket]
-  Broker --> Crypto[Message and file cryptography]
+  Broker --> WS[Авторизованный<br/>WebSocket]
+  Broker --> Crypto[Криптография<br/>сообщений и файлов]
