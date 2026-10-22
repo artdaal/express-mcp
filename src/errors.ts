@@ -25,7 +25,7 @@ const SESSION_MESSAGES = {
   BROKER_UNAVAILABLE: "The local session service is unavailable. Run express-mcp install, then express-mcp status.",
   BROKER_BUSY: "The local session service reached its request limit.",
   REAUTH_REQUIRED: "Run express-mcp login and approve this device in the official Express app.",
-  KEYCHAIN_LOCKED: "The session Keychain item is unavailable. Unlock the macOS login Keychain and restart the service.",
+  KEYCHAIN_LOCKED: "The session Keychain item is unavailable. Unlock the macOS login Keychain; the running service retries safe recovery automatically.",
   KEYCHAIN_UNAVAILABLE: "The session Keychain helper is unavailable.",
   AUTH_RECOVERY_REQUIRED: "A refresh exchange has an uncertain outcome. Run express-mcp login; the old refresh token will not be replayed.",
   AUTH_RETRY_WAIT: "Authentication refresh is waiting for a bounded retry.",

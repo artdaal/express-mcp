@@ -17,6 +17,11 @@ export const bundleSchema = z.object({
 export type AuthBundle = z.infer<typeof bundleSchema>;
 export type AccountKey = z.infer<typeof keySchema>;
 export type AuthState = "missing" | "locked" | "ready" | "refreshing" | "retry_wait" | "recovery_required" | "reauth_required";
+export type AuthRecoveryPhase = "restore" | "fence" | "exchange" | "replacement_save" | "result_save" | "enrollment" | "enrollment_reconcile";
+export interface AuthRecoveryEvent {
+  timestamp: number; phase: AuthRecoveryPhase; state: AuthState; generation: number | null; code: string | null;
+  outcome: "started" | "succeeded" | "retry_scheduled" | "ambiguous" | "revoked";
+}
 export interface SecretStore {
   load(): Promise<AuthBundle | null>;
   save(value: AuthBundle): Promise<void>;
@@ -42,4 +47,11 @@ export function parseBundle(value: unknown): AuthBundle {
   const result = bundleSchema.safeParse(value);
   if (!result.success) throw new SessionError("AUTH_STORE_INVALID");
   return result.data;
+}
+// Validate the whole replacement with the same unchanged contract as Keychain.
+export function replacementBundle(previous: AuthBundle, accessToken: string, refreshToken: string, expiresIn: number | null, issuedAt: number): AuthBundle | null {
+  if (expiresIn !== null && (typeof expiresIn !== "number" || !Number.isFinite(expiresIn) || expiresIn <= 0)) return null;
+  const result = bundleSchema.safeParse({ ...previous, accessToken, refreshToken, generation: previous.generation + 1, refreshPending: false, issuedAt,
+    expiresAt: expiresIn === null ? null : issuedAt + expiresIn * 1000, refreshAt: expiresIn === null ? null : issuedAt + expiresIn * 500 });
+  return result.success ? result.data : null;
 }

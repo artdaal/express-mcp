@@ -1,7 +1,34 @@
 import { RefreshResult } from "./auth.js";
-import { AuthBundle, SessionConfig, SessionError } from "./types.js";
+import { AuthBundle, replacementBundle, SessionConfig, SessionError } from "./types.js";
 
 export type Fetcher = typeof fetch;
+// Only transport evidence that proves no HTTP transmission permits token reuse.
+// General timeouts, resets and arbitrary error text never establish that fact.
+function noTransmissionCode(error: unknown, seen = new Set<unknown>()): string | null {
+  if (!error || typeof error !== "object" || seen.has(error)) return null;
+  seen.add(error);
+  const value = error as {name?: unknown; code?: unknown; syscall?: unknown; cause?: unknown};
+  if (value.name === "AbortError" || value.name === "TimeoutError") return null;
+  const dns = value.code === "ENOTFOUND" || value.code === "EAI_AGAIN";
+  const connectOnly = ["ETIMEDOUT", "ENETUNREACH", "EHOSTUNREACH", "ENETDOWN", "EHOSTDOWN"].includes(value.code as string);
+  const known = dns || connectOnly || value.code === "ECONNREFUSED" || value.code === "UND_ERR_CONNECT_TIMEOUT";
+  if (value.code !== undefined && !known) return null;
+  if (value.syscall !== undefined && value.syscall !== "connect" && !(dns && ["getaddrinfo", "getnameinfo", "queryA", "queryAAAA"].includes(value.syscall as string))) return null;
+  if (value.cause !== undefined && !noTransmissionCode(value.cause, new Set(seen))) return null;
+  if (error instanceof AggregateError) {
+    // NodeAggregateError copies the first leaf's code, but omits its syscall.
+    // That summary is supported metadata; certainty still comes from every leaf.
+    if (!error.errors.length) return null;
+    if (connectOnly && value.syscall !== "connect" && error.errors[0]?.code !== value.code) return null;
+    const codes = error.errors.map(leaf => noTransmissionCode(leaf, new Set(seen)));
+    return codes.every(code => code !== null) ? codes.every(code => code === codes[0]) ? codes[0]! : "REFRESH_CONNECT_FAILED" : null;
+  }
+  if (known) return connectOnly && value.syscall !== "connect" ? null : value.code === "ETIMEDOUT" ? "REFRESH_CONNECT_TIMEOUT" : value.code as string;
+  return noTransmissionCode(value.cause, seen);
+}
+class NoTransmissionError extends SessionError {
+  constructor(code: string, readonly transportCode: string) { super(code); }
+}
 export async function readJson(response: Response, limit = 4 * 1024 * 1024): Promise<any> {
   const reader = response.body?.getReader();
   if (!reader) throw new SessionError("UNSUPPORTED_PROTOCOL");
@@ -64,8 +91,10 @@ export class SessionHttp {
       if (!response.ok) this.recordError(origin, route, `HTTP_${response.status}`, response.status);
       return response;
     } catch (error: any) {
+      const noSend = noTransmissionCode(error);
       const code = ["AbortError", "TimeoutError"].includes(error?.name) ? "UPSTREAM_TIMEOUT" : error?.cause?.code === "ENOTFOUND" ? "UPSTREAM_DNS_ERROR" : ["CERT_HAS_EXPIRED", "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "SELF_SIGNED_CERT_IN_CHAIN", "DEPTH_ZERO_SELF_SIGNED_CERT"].includes(error?.cause?.code) ? "UPSTREAM_TLS_ERROR" : "UPSTREAM_UNAVAILABLE";
-      this.recordError(origin, route, code, null); throw new SessionError(code);
+      this.recordError(origin, route, code, null);
+      throw noSend ? new NoTransmissionError(code, noSend) : new SessionError(code);
     }
   }
   private recordError(origin: string, route: string, code: string, httpStatus: number | null) {
@@ -98,7 +127,7 @@ export class SessionHttp {
     const ctsOrigin = this.authorizeCtsOrigin(bundle.ctsOrigin);
     let response: Response;
     try { response = await this.response(ctsOrigin, "/api/v1/ad_integration/token/refresh", { method: "POST", headers: { Authorization: `Bearer ${bundle.accessToken}` }, body: JSON.stringify({ refresh_token: bundle.refreshToken }) }); }
-    catch { return { kind: "ambiguous", code: "REFRESH_RESPONSE_LOST" }; }
+    catch (error) { return error instanceof NoTransmissionError ? { kind: "temporary", code: error.transportCode } : { kind: "ambiguous", code: "REFRESH_RESPONSE_LOST" }; }
     let body: any;
     try { body = await readJson(response, 256 * 1024); }
     catch { return { kind: "ambiguous", code: "REFRESH_RESPONSE_INVALID" }; }
@@ -112,6 +141,7 @@ export class SessionHttp {
     if (response.ok && body?.status !== "error" && typeof value?.cts_access_token === "string" && value.cts_access_token && typeof value.refresh_token === "string" && value.refresh_token) {
       const ttl = value.expires_in;
       if (ttl !== undefined && (typeof ttl !== "number" || !Number.isFinite(ttl) || ttl <= 0)) return { kind: "ambiguous", code: "REFRESH_RESPONSE_INVALID" };
+      if (!replacementBundle(bundle, value.cts_access_token, value.refresh_token, ttl ?? null, Date.now())) return { kind: "ambiguous", code: "REFRESH_RESPONSE_INVALID" };
       return { kind: "ok", accessToken: value.cts_access_token, refreshToken: value.refresh_token, expiresIn: ttl ?? null };
     }
     return { kind: "ambiguous", code: "REFRESH_OUTCOME_UNKNOWN" };
